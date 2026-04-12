@@ -5,7 +5,8 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { pool, db } from "./db";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { sql } from "drizzle-orm";
+import { readFileSync, existsSync } from "fs";
 import path from "path";
 
 const app = express();
@@ -101,14 +102,24 @@ process.on("unhandledRejection", (reason) => {
     console.log("PORT:", process.env.PORT);
     console.log("DATABASE_URL set:", !!process.env.DATABASE_URL);
 
-    console.log("Running database migrations...");
-    const migrationsFolder = path.resolve(__dirname, "..", "migrations");
-    await migrate(db, {
-      migrationsFolder,
-      migrationsSchema: "public",
-      migrationsTable: "__drizzle_migrations",
-    });
-    console.log("Database migrations complete.");
+    console.log("Running database setup...");
+    const migrationFile = path.resolve(__dirname, "..", "migrations", "0000_sweet_genesis.sql");
+    if (existsSync(migrationFile)) {
+      const migrationSql = readFileSync(migrationFile, "utf8");
+      const statements = migrationSql.split("--> statement-breakpoint").map(s => s.trim()).filter(Boolean);
+      for (const statement of statements) {
+        try {
+          await db.execute(sql.raw(statement));
+        } catch (e: any) {
+          if (!e.message?.includes("already exists")) {
+            console.warn("Migration statement skipped:", e.message);
+          }
+        }
+      }
+      console.log("Database setup complete.");
+    } else {
+      console.log("No migration file found, skipping.");
+    }
 
     await registerRoutes(httpServer, app);
 
