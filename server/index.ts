@@ -4,7 +4,9 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { pool } from "./db";
+import { pool, db } from "./db";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import path from "path";
 
 const app = express();
 const httpServer = createServer(app);
@@ -98,6 +100,11 @@ process.on("unhandledRejection", (reason) => {
     console.log("NODE_ENV:", process.env.NODE_ENV);
     console.log("PORT:", process.env.PORT);
     console.log("DATABASE_URL set:", !!process.env.DATABASE_URL);
+
+    console.log("Running database migrations...");
+    const migrationsFolder = path.resolve(__dirname, "..", "migrations");
+    await migrate(db, { migrationsFolder });
+    console.log("Database migrations complete.");
 
     await registerRoutes(httpServer, app);
 
