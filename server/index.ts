@@ -103,7 +103,11 @@ process.on("unhandledRejection", (reason) => {
 
     console.log("Running database migrations...");
     const migrationsFolder = path.resolve(__dirname, "..", "migrations");
-    await migrate(db, { migrationsFolder });
+    await migrate(db, {
+      migrationsFolder,
+      migrationsSchema: "public",
+      migrationsTable: "__drizzle_migrations",
+    });
     console.log("Database migrations complete.");
 
     await registerRoutes(httpServer, app);
