@@ -103,7 +103,7 @@ process.on("unhandledRejection", (reason) => {
     console.log("DATABASE_URL set:", !!process.env.DATABASE_URL);
 
     console.log("Running database setup...");
-    const migrationFile = path.resolve(__dirname, "..", "migrations", "0000_sweet_genesis.sql");
+    const migrationFile = path.resolve(process.cwd(), "migrations", "0000_sweet_genesis.sql");
     if (existsSync(migrationFile)) {
       const migrationSql = readFileSync(migrationFile, "utf8");
       const statements = migrationSql.split("--> statement-breakpoint").map(s => s.trim()).filter(Boolean);
