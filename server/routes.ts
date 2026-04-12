@@ -36,7 +36,11 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
 
-  await seedDatabase();
+  try {
+    await seedDatabase();
+  } catch (e: any) {
+    console.warn("seedDatabase skipped (tables may not exist yet):", e.message);
+  }
 
   // === AUTH ===
   app.post(api.auth.login.path, async (req, res) => {
