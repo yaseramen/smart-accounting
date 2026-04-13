@@ -4,8 +4,7 @@ import connectPgSimple from "connect-pg-simple";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { pool, db } from "./db";
-import { sql } from "drizzle-orm";
+import { pool } from "./db";
 import { readFileSync, existsSync } from "fs";
 import path from "path";
 
@@ -107,16 +106,21 @@ process.on("unhandledRejection", (reason) => {
     if (existsSync(migrationFile)) {
       const migrationSql = readFileSync(migrationFile, "utf8");
       const statements = migrationSql.split("--> statement-breakpoint").map(s => s.trim()).filter(Boolean);
-      for (const statement of statements) {
-        try {
-          await db.execute(sql.raw(statement));
-        } catch (e: any) {
-          if (!e.message?.includes("already exists")) {
-            console.warn("Migration statement skipped:", e.message);
+      const client = await pool.connect();
+      try {
+        for (const statement of statements) {
+          try {
+            await client.query(statement);
+          } catch (e: any) {
+            if (!e.message?.includes("already exists")) {
+              console.warn("Migration statement skipped:", e.message?.slice(0, 100));
+            }
           }
         }
+        console.log("Database setup complete.");
+      } finally {
+        client.release();
       }
-      console.log("Database setup complete.");
     } else {
       console.log("No migration file found, skipping.");
     }
